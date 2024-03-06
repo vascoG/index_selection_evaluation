@@ -15,6 +15,14 @@ class Workload:
             return indexable_columns
         return sorted(list(indexable_columns))
 
+    def partitionable_columns(self, return_sorted=True):
+        partitionable_columns = set()
+        for query in self.queries:
+            partitionable_columns |= set(query.columns)
+        if not return_sorted:
+            return partitionable_columns
+        return sorted(list(partitionable_columns))
+
     def potential_indexes(self):
         return sorted([Index([c]) for c in self.indexable_columns()])
 
@@ -31,12 +39,22 @@ class Workload:
 class Column:
     def __init__(self, name):
         self.name = name.lower()
+        self.maximum = None
+        self.minimum = None
+        self.median = None
+        self.type = None
         self.table = None
         self.global_column_id = None
         self.length = None
         self.distinct_values = None
         self.is_padding_column = False
         self.width = None
+
+    def is_numeric(self):
+        return self.type in ["integer", "double precision", "bigint", "smallint", "real", "numeric", "decimal"]
+
+    def is_text_or_date(self):
+        return self.type in ["text", "character varying", "character", "varchar", "char", "date", "timestamp"]
 
     def __lt__(self, other):
         return self.name < other.name

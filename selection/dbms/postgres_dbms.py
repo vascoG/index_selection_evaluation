@@ -137,6 +137,74 @@ class PostgresDatabaseConnector(DatabaseConnector):
 
         assert result[0] is True, f"Could not drop simulated index with oid = {oid}."
 
+    def _maximum(self, column):
+        statement = f"select max({column.name}) from {column.table}"
+        result = self.exec_fetch(statement)
+
+        column.maximum = result[0]
+        return result[0]
+
+    def _minimum(self, column):
+        statement = f"select min({column.name}) from {column.table}"
+        result = self.exec_fetch(statement)
+
+        column.minimum = result[0]
+        return result[0]
+
+    def _median(self, column):
+        statement = (
+            f"select percentile_disc(0.5) within group (order by {column.name}) from {column.table}"
+        )
+        result = self.exec_fetch(statement)
+
+        column.median = result[0]
+        return result[0]
+    
+    def _type(self, column):
+        statement = f"select data_type from information_schema.columns where table_name = '{column.table}' and column_name = '{column.name}';"
+        result = self.exec_fetch(statement)
+
+        column.type = result[0]
+        return result[0]
+
+    def _simulate_partition(self, partition):
+        table_name = partition.table()
+        minimum = partition.column.minimum
+        maximum = partition.column.maximum
+        median = partition.column.median
+
+        if minimum is None or maximum is None or median is None:
+            return None
+        if minimum == median or maximum == median:
+            return None
+
+        if partition.column.is_text_or_date():
+            minimum = f"$${minimum}$$"
+            maximum = f"$${maximum}$$"
+            median = f"$${median}$$"
+
+        statement = (
+            f"select hypopg_partition_table( '{table_name}', 'PARTITION BY RANGE ({partition.column.name})');")
+        statement1 = (
+            f"select hypopg_add_partition('hypo_part_range_{table_name}_1', 'PARTITION OF {table_name} FOR VALUES FROM ({minimum}) TO ({median})');")
+        statement2 = (
+            f"select hypopg_add_partition('hypo_part_range_{table_name}_2', 'PARTITION OF {table_name} FOR VALUES FROM ({median}) TO ({maximum})');")
+
+        logging.info(statement)
+        logging.info(statement1)
+        logging.info(statement2)
+
+        result = self.exec_fetch(statement)
+        self.exec_fetch(statement1)
+        self.exec_fetch(statement2)
+        return result
+
+    def _drop_simulated_partition(self, tablename, partition):
+        statement = f"SELECT hypopg_drop_table(relid) FROM hypopg_table() WHERE tablename = '{tablename}';"
+        result = self.exec_fetch(statement)
+
+        assert result is not None, f"Could not drop simulated partition with tablename = {tablename} and column {partition.column}."
+
     def create_index(self, index):
         table_name = index.table()
         statement = (
@@ -159,6 +227,11 @@ class PostgresDatabaseConnector(DatabaseConnector):
             drop_stmt = "drop index {}".format(index_name)
             logging.debug("Dropping index {}".format(index_name))
             self.exec_only(drop_stmt)
+
+    def drop_partitions(self):
+        logging.info("Dropping partitions")
+        stmt = "select hypopg_reset_table()"
+        self.exec_fetch(stmt, one=False)
 
     # PostgreSQL expects the timeout in milliseconds
     def exec_query(self, query, timeout=None, cost_evaluation=False):

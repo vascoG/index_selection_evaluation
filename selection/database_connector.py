@@ -11,9 +11,11 @@ class DatabaseConnector:
         # This does not reflect the number of unique simulated indexes but
         # the number of simulate_index calls
         self.simulated_indexes = 0
+        self.simulated_partitions = 0
         self.cost_estimations = 0
         self.cost_estimation_duration = 0
         self.index_simulation_duration = 0
+        self.partition_simulation_duration = 0
 
     def exec_only(self, statement):
         self._cursor.execute(statement)
@@ -67,6 +69,22 @@ class DatabaseConnector:
         end_time = time.time()
         self.index_simulation_duration += end_time - start_time
 
+    def simulate_partition(self, partition):
+        self.simulated_partitions += 1
+
+        start_time = time.time()
+        result = self._simulate_partition(partition)
+        end_time = time.time()
+        self.partition_simulation_duration += end_time - start_time
+
+        return result
+
+    def drop_simulated_partition(self, tablename, partition):
+        start_time = time.time()
+        self._drop_simulated_partition(tablename, partition)
+        end_time = time.time()
+        self.partition_simulation_duration += end_time - start_time
+
     def get_cost(self, query):
         self.cost_estimations += 1
 
@@ -76,6 +94,12 @@ class DatabaseConnector:
         self.cost_estimation_duration += end_time - start_time
 
         return cost
+
+    def get_column_statistics(self, column):
+        self._type(column)
+        self._minimum(column)
+        self._maximum(column)
+        self._median(column)
 
     # This is very similar to get_cost() above. Some algorithms need to directly access
     # get_plan. To not exclude it from costing, we add the instrumentation here.
