@@ -1,5 +1,6 @@
 import logging
 import time
+import psycopg2
 
 
 class DatabaseConnector:
@@ -21,10 +22,13 @@ class DatabaseConnector:
         self._cursor.execute(statement)
 
     def exec_fetch(self, statement, one=True):
-        self._cursor.execute(statement)
-        if one:
-            return self._cursor.fetchone()
-        return self._cursor.fetchall()
+        try:
+            self._cursor.execute(statement)
+            if one:
+                return self._cursor.fetchone()
+            return self._cursor.fetchall()
+        except psycopg2.OperationalError as e:
+            logging.error(e)
 
     def enable_simulation(self):
         raise NotImplementedError
@@ -96,10 +100,12 @@ class DatabaseConnector:
         return cost
 
     def get_column_statistics(self, column):
+        logging.info(f"Getting statistics for column {column}")
         self._type(column)
         self._minimum(column)
         self._maximum(column)
         self._median(column)
+        logging.info(f"Statistics for column {column} retrieved")
 
     # This is very similar to get_cost() above. Some algorithms need to directly access
     # get_plan. To not exclude it from costing, we add the instrumentation here.

@@ -173,11 +173,6 @@ class PostgresDatabaseConnector(DatabaseConnector):
         maximum = partition.column.maximum
         median = partition.column.median
 
-        if minimum is None or maximum is None or median is None:
-            return None
-        if minimum == median or maximum == median:
-            return None
-
         if partition.column.is_text_or_date():
             minimum = f"$${minimum}$$"
             maximum = f"$${maximum}$$"
@@ -276,7 +271,11 @@ class PostgresDatabaseConnector(DatabaseConnector):
     def _get_plan(self, query):
         query_text = self._prepare_query(query)
         statement = f"explain (format json) {query_text}"
-        query_plan = self.exec_fetch(statement)[0][0]["Plan"]
+        query_plan = self.exec_fetch(statement)
+        if query_plan:
+            query_plan = query_plan[0][0]["Plan"]
+        else:
+            raise Exception(f"Could not get plan for query {query.text}")
         self._cleanup_query(query)
         return query_plan
 
