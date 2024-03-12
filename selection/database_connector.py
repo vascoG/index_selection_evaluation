@@ -99,13 +99,29 @@ class DatabaseConnector:
 
         return cost
 
-    def get_column_statistics(self, column):
-        logging.info(f"Getting statistics for column {column}")
-        self._type(column)
-        self._minimum(column)
-        self._maximum(column)
-        self._median(column)
-        logging.info(f"Statistics for column {column} retrieved")
+    def get_column_statistics(self, partition):
+        logging.info(f"Getting statistics for partition {partition}")
+        self._type(partition.column)
+
+
+        statement = f"SELECT most_common_vals, histogram_bounds FROM pg_stats WHERE attname = '{partition.column.name}';"
+        result = self.exec_fetch(statement)
+        most_common_vals = result[0]
+        histogram_bounds = result[1]
+
+        if histogram_bounds is None:
+            most_common_vals = sorted(most_common_vals)
+            partition.column.minimum = most_common_vals[0]
+            partition.column.maximum = most_common_vals[-1]
+            partition.column.median = most_common_vals[len(most_common_vals) // 2]
+        else:
+            histogram_bounds = histogram_bounds.replace("{", "").replace("}", "").split(",")
+            partition.column.minimum = histogram_bounds[0]
+            partition.column.maximum = histogram_bounds[-1]
+            partition.column.median = histogram_bounds[len(histogram_bounds) // 2]
+      
+        logging.info(f"Statistics for column {partition.column} retrieved")
+        return
 
     # This is very similar to get_cost() above. Some algorithms need to directly access
     # get_plan. To not exclude it from costing, we add the instrumentation here.

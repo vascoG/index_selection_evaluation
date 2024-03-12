@@ -136,29 +136,6 @@ class PostgresDatabaseConnector(DatabaseConnector):
         result = self.exec_fetch(statement)
 
         assert result[0] is True, f"Could not drop simulated index with oid = {oid}."
-
-    def _maximum(self, column):
-        statement = f"select max({column.name}) from {column.table}"
-        result = self.exec_fetch(statement)
-
-        column.maximum = result[0]
-        return result[0]
-
-    def _minimum(self, column):
-        statement = f"select min({column.name}) from {column.table}"
-        result = self.exec_fetch(statement)
-
-        column.minimum = result[0]
-        return result[0]
-
-    def _median(self, column):
-        statement = (
-            f"select percentile_disc(0.5) within group (order by {column.name}) from {column.table}"
-        )
-        result = self.exec_fetch(statement)
-
-        column.median = result[0]
-        return result[0]
     
     def _type(self, column):
         statement = f"select data_type from information_schema.columns where table_name = '{column.table}' and column_name = '{column.name}';"
@@ -174,6 +151,10 @@ class PostgresDatabaseConnector(DatabaseConnector):
         median = partition.column.median
 
         if partition.column.is_text_or_date():
+            # remove white trailing spaces
+            minimum = minimum.replace('"', '').strip()
+            maximum = maximum.replace('"', '').strip()
+            median = median.replace('"', '').strip()
             minimum = f"$${minimum}$$"
             maximum = f"$${maximum}$$"
             median = f"$${median}$$"
