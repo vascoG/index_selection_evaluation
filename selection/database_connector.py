@@ -110,6 +110,7 @@ class DatabaseConnector:
         histogram_bounds = result[1]
 
         if histogram_bounds is None:
+            most_common_vals = most_common_vals.replace("{", "").replace("}", "").split(",")
             most_common_vals = sorted(most_common_vals)
             partition.column.minimum = most_common_vals[0]
             partition.column.maximum = most_common_vals[-1]
