@@ -101,7 +101,7 @@ class DatabaseConnector:
 
     def get_column_statistics(self, partition):
         logging.info(f"Getting statistics for partition {partition}")
-        self._type(partition.column)
+        partition.type = self._type(partition.column)
 
 
         statement = f"SELECT most_common_vals, histogram_bounds FROM pg_stats WHERE attname = '{partition.column.name}';"

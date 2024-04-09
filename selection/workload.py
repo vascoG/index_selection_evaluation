@@ -55,6 +55,9 @@ class Column:
 
     def is_text_or_date(self):
         return self.type in ["text", "character varying", "character", "varchar", "char", "date", "timestamp"]
+    
+    def is_date(self):
+        return self.type in ["date", "timestamp"]
 
     def __lt__(self, other):
         return self.name < other.name
