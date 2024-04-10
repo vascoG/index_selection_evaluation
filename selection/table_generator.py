@@ -17,7 +17,10 @@ class TableGenerator:
         explicit_database_name=None,
     ):
         self.scale_factor = scale_factor
-        self.benchmark_name = benchmark_name
+        if benchmark_name == "kevel":
+            self.benchmark_name = "tpch"
+        else:
+            self.benchmark_name = benchmark_name
         self.db_connector = database_connector
         self.explicit_database_name = explicit_database_name
 
@@ -130,7 +133,7 @@ class TableGenerator:
         return os.listdir(self.directory)
 
     def _prepare(self):
-        if self.benchmark_name == "tpch":
+        if self.benchmark_name == "tpch" or self.benchmark_name == "kevel":
             self.make_command = ["make", "DATABASE=POSTGRESQL"]
             if platform.system() == "Darwin":
                 self.make_command.append("MACHINE=MACOS")
@@ -154,4 +157,4 @@ class TableGenerator:
             ):
                 raise Exception("Wrong TPCDS scale factor")
         else:
-            raise NotImplementedError("only tpch/ds implemented.")
+            raise NotImplementedError(f"only tpch/ds implemented. and not {self.benchmark_name}")
