@@ -141,6 +141,12 @@ class TableGenerator:
             self.directory = "./index_selection_evaluation/tpch-kit/dbgen"
             self.create_table_statements_file = "dss.ddl"
             self.cmd = ["./dbgen", "-s", str(self.scale_factor), "-f"]
+        elif self.benchmark_name == "tpce":
+            self.make_command = ["make", "DATABASE=POSTGRESQL"]
+            if platform.system() == "Darwin":
+                self.make_command.append("MACHINE=MACOS")
+            self.directory = "./SWPRL/tpc-e-tool/scripts"
+            self.create_table_statements_file = "create_tables.sql"
         elif self.benchmark_name == "tpcds":
             self.make_command = ["make"]
             if platform.system() == "Darwin":
