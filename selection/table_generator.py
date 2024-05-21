@@ -6,7 +6,7 @@ import subprocess
 
 from .utils import b_to_mb
 from .workload import Column, Table
-
+from index_selection_evaluation.selection.dbms.postgres_dbms import PostgresDatabaseConnector
 
 class TableGenerator:
     def __init__(
@@ -23,6 +23,8 @@ class TableGenerator:
             self.benchmark_name = benchmark_name
         self.db_connector = database_connector
         self.explicit_database_name = explicit_database_name
+        if benchmark_name == "tpce":
+            self.explicit_database_name = "dbt1"
 
         self.database_names = self.db_connector.database_names()
         self.tables = []
@@ -33,7 +35,10 @@ class TableGenerator:
             self.create_database()
         else:
             logging.debug("Database with given scale factor already " "existing")
-        self._read_column_names()
+        if benchmark_name == "tpce":
+            self._read_column_names_on_postgres()
+        else:
+            self._read_column_names()
 
     def database_name(self):
         if self.explicit_database_name:
@@ -61,6 +66,23 @@ class TableGenerator:
                 column_object = Column(name)
                 table.add_column(column_object)
                 self.columns.append(column_object)
+    
+    def _read_column_names_on_postgres(self):
+        conector = PostgresDatabaseConnector(self.explicit_database_name, autocommit=True)
+
+        query = "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE';"
+        table_names = conector.exec_fetch(query, one=False)
+        table_names = [row[0] for row in table_names]
+        for table_name in table_names:
+            table = Table(table_name)
+            self.tables.append(table)
+            query = f"SELECT column_name FROM information_schema.columns WHERE table_name = '{table_name}';"
+            column_names = conector.exec_fetch(query, one=False)
+            column_names = [row[0] for row in column_names]
+            for column_name in column_names:
+                column = Column(column_name)
+                table.add_column(column)
+                self.columns.append(column)
 
     def _generate(self):
         logging.info("Generating {} data".format(self.benchmark_name))
@@ -145,8 +167,6 @@ class TableGenerator:
             self.make_command = ["make", "DATABASE=POSTGRESQL"]
             if platform.system() == "Darwin":
                 self.make_command.append("MACHINE=MACOS")
-            self.directory = "./SWPRL/tpc-e-tool/scripts"
-            self.create_table_statements_file = "create_tables.sql"
         elif self.benchmark_name == "tpcds":
             self.make_command = ["make"]
             if platform.system() == "Darwin":

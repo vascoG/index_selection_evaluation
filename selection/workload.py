@@ -54,10 +54,10 @@ class Column:
         return self.type in ["integer", "double precision", "bigint", "smallint", "real", "numeric", "decimal"]
 
     def is_text_or_date(self):
-        return self.type in ["text", "character varying", "character", "varchar", "char", "date", "timestamp"]
+        return self.type in ["text", "character varying", "character", "varchar", "char", "date", "timestamp", "timestamp without time zone"]
     
     def is_date(self):
-        return self.type in ["date", "timestamp"]
+        return self.type in ["date", "timestamp", "timestamp without time zone"]
 
     def __lt__(self, other):
         return self.name < other.name
