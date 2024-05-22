@@ -1,4 +1,5 @@
 from .index import Index
+import re
 
 
 class Workload:
@@ -18,7 +19,7 @@ class Workload:
     def partitionable_columns(self, return_sorted=True):
         partitionable_columns = set()
         for query in self.queries:
-            partitionable_columns |= set(query.columns)
+            partitionable_columns |= set(query._extract_columns_after_where())
         if not return_sorted:
             return partitionable_columns
         return sorted(list(partitionable_columns))
@@ -118,6 +119,18 @@ class Query:
             self.columns = []
         else:
             self.columns = columns
+
+    def _extract_columns_after_where(self):
+        where_clause_pattern = re.compile(r'\bWHERE\b', re.IGNORECASE)
+        match = where_clause_pattern.search(self.text)
+
+        if not match:
+            return []
+
+        where_clause_text = self.text[match.end():]
+
+        # Filter out SQL keywords and return column names
+        return [column for column in self.columns if column.name in where_clause_text]
 
     def __repr__(self):
         return f"Q{self.nr}"
