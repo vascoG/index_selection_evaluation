@@ -54,7 +54,7 @@ class DatabaseConnector:
                     self.exec_only(query_statement)
                 except Exception as e:
                     logging.error(e)
-            elif "select" in query_statement or "SELECT" in query_statement:
+            else:
                 return query_statement
 
     def simulate_index(self, index):

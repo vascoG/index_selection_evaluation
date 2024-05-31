@@ -20,6 +20,7 @@ class Workload:
         partitionable_columns = set()
         for query in self.queries:
             partitionable_columns |= set(query._extract_columns_after_where())
+            # partitionable_columns |= set(query._extract_columns_after_into())
         if not return_sorted:
             return partitionable_columns
         return sorted(list(partitionable_columns))
@@ -131,6 +132,18 @@ class Query:
 
         # Filter out SQL keywords and return column names
         return [column for column in self.columns if column.name in where_clause_text]
+    
+    def _extract_columns_after_into(self):
+        into_clause_pattern = re.compile(r'\bINTO\b', re.IGNORECASE)
+        match = into_clause_pattern.search(self.text)
+
+        if not match:
+            return []
+
+        into_clause_text = self.text[match.end():]
+
+        # Filter out SQL keywords and return column names
+        return [column for column in self.columns if column.name in into_clause_text]
 
     def __repr__(self):
         return f"Q{self.nr}"

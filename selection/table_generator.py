@@ -17,14 +17,13 @@ class TableGenerator:
         explicit_database_name=None,
     ):
         self.scale_factor = scale_factor
-        if benchmark_name == "kevel":
-            self.benchmark_name = "tpch"
-        else:
-            self.benchmark_name = benchmark_name
+        self.benchmark_name = benchmark_name
         self.db_connector = database_connector
         self.explicit_database_name = explicit_database_name
         if benchmark_name == "tpce":
             self.explicit_database_name = "dbt1"
+        if benchmark_name == "kevel":
+            self.explicit_database_name = "kevel"
 
         self.database_names = self.db_connector.database_names()
         self.tables = []
@@ -35,7 +34,7 @@ class TableGenerator:
             self.create_database()
         else:
             logging.debug("Database with given scale factor already " "existing")
-        if benchmark_name == "tpce":
+        if benchmark_name == "tpce" or benchmark_name == "kevel":
             self._read_column_names_on_postgres()
         else:
             self._read_column_names()
@@ -155,7 +154,7 @@ class TableGenerator:
         return os.listdir(self.directory)
 
     def _prepare(self):
-        if self.benchmark_name == "tpch" or self.benchmark_name == "kevel":
+        if self.benchmark_name == "tpch":
             self.make_command = ["make", "DATABASE=POSTGRESQL"]
             if platform.system() == "Darwin":
                 self.make_command.append("MACHINE=MACOS")
@@ -163,7 +162,7 @@ class TableGenerator:
             self.directory = "./index_selection_evaluation/tpch-kit/dbgen"
             self.create_table_statements_file = "dss.ddl"
             self.cmd = ["./dbgen", "-s", str(self.scale_factor), "-f"]
-        elif self.benchmark_name == "tpce":
+        elif self.benchmark_name == "tpce" or self.benchmark_name == "kevel":
             self.make_command = ["make", "DATABASE=POSTGRESQL"]
             if platform.system() == "Darwin":
                 self.make_command.append("MACHINE=MACOS")

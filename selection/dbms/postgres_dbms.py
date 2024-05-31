@@ -182,6 +182,8 @@ class PostgresDatabaseConnector(DatabaseConnector):
         assert result is not None, f"Could not drop simulated partition with tablename = {tablename} and column {partition.column}."
 
     def get_column_percentiles(self, column):
+        if column.name == "order":
+            column.name = '"order"'
         statement = f"select max({column.name}) from (select {column.name}, ntile(10) over (order by {column.name}) as percentile from {column.table})as p group by percentile order by percentile;"
         result = self.exec_fetch(statement, one=False)
         return result
